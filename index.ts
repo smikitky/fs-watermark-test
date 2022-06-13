@@ -4,11 +4,11 @@ import * as s from "stream";
 import * as path from "path";
 
 // Reports `writableLength` of the given buffer until the stream finishes
-const checkStream = (stream: s.Writable) => {
+const checkStream = (stream: s.Writable, report: boolean) => {
   return new Promise<void>((resolve) => {
     const id = setInterval(() => {
       const length = stream.writableLength;
-      console.log(length, new Date().toISOString());
+      report && console.log(length, new Date().toISOString());
     }, 100);
     stream.on("finish", () => {
       clearInterval(id);
@@ -53,7 +53,7 @@ const test = async ({
       }
       stream.end();
     })(),
-    ...(reportStatus ? [checkStream(stream)] : []),
+    checkStream(stream, reportStatus),
   ]);
 
   const end = Date.now();
@@ -64,9 +64,19 @@ const test = async ({
 };
 
 const main = async () => {
-  const chunkSize = 4 * 1024;
-  await test({ chunkSize, waitForDrain: false, reportStatus: true });
-  await test({ chunkSize, waitForDrain: true, reportStatus: true });
+  const huge = 1024 * 1024 * 1024; // 1GB
+  const large = 64 * 1024 * 1024; // 64MB
+  const middle = 4 * 1024 * 1024; // 4MB
+  const small = 4 * 1024; // 4KB
+
+  await test({ chunkSize: large, waitForDrain: false, reportStatus: true });
+  await test({ chunkSize: large, waitForDrain: true, reportStatus: true });
+
+  // await test({ chunkSize: huge, waitForDrain: true });
+  // await test({ chunkSize: large, waitForDrain: false, reportStatus: true });
+  // await test({ chunkSize: large, waitForDrain: true, reportStatus: true });
+  // await test({ chunkSize: small, waitForDrain: false });
+  // await test({ chunkSize: small, waitForDrain: true });
 };
 
 main();
