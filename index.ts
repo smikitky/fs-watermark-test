@@ -43,7 +43,8 @@ const test = async ({
   stream.on("drain", () => handler());
   const wait = () => new Promise<void>((resolve) => (handler = resolve));
 
-  const start = Date.now();
+  const startedAt = Date.now();
+  let streamWrittenAt: number;
 
   await Promise.all([
     (async () => {
@@ -52,15 +53,21 @@ const test = async ({
         if (waitForDrain && !okay) await wait();
       }
       stream.end();
+      streamWrittenAt = Date.now();
     })(),
     checkStream(stream, reportStatus),
   ]);
 
-  const end = Date.now();
+  const streamClosedAt = Date.now();
   await fsp.unlink(fileName);
-  const time = end - start;
 
-  console.log({ chunkSize, waitForDrain, time });
+  // time between createWriteStream and stream.on("finish")
+  const totalTime = streamClosedAt - startedAt;
+
+  // time between stream.end() and stream.on("finish")
+  const lagTime = streamClosedAt - streamWrittenAt!;
+
+  console.log({ chunkSize, waitForDrain, totalTime, lagTime });
 };
 
 const main = async () => {
